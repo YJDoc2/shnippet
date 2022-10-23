@@ -1,49 +1,56 @@
 mod commands;
 mod util;
-use clap::{App, Arg, SubCommand};
+
+use util::shnippet_name;
+use clap::{App, SubCommand, AppSettings};
 use std::process::exit;
 
 fn main() {
+    let mut data = util::setup();
+
+    let shnippets: Vec<App> = data.commands.iter().map(|(name, description)| {
+        SubCommand::with_name(name).about(description.as_str())
+    }).collect();
+
     let matches = App::new("Shnippet")
         .version("0.1.0")
         .author("YJDoc2")
         .about("Commandline snippet manager")
+        .setting(AppSettings::SubcommandRequiredElseHelp)
         .subcommand(SubCommand::with_name("list").about("List all shnippets"))
         .subcommand(SubCommand::with_name("new").about("Add new shnippet"))
         .subcommand(
             SubCommand::with_name("delete")
                 .about("Delete an existing shnippet")
-                .arg(Arg::with_name("name").help("Name of shnippet to delete")),
+                .subcommands(shnippets.clone()).setting(AppSettings::SubcommandRequiredElseHelp),
         )
         .subcommand(
             SubCommand::with_name("edit")
                 .about("Edit an existing shnippet")
-                .arg(Arg::with_name("name").help("Name of shnippet to edit")),
+                .subcommands(shnippets.clone()).setting(AppSettings::SubcommandRequiredElseHelp),
         )
         .subcommand(
             SubCommand::with_name("exec")
                 .about("Run a shnippet in shell")
-                .arg(Arg::with_name("name").help("Name of shnippet to run")),
+                .subcommands(shnippets).setting(AppSettings::SubcommandRequiredElseHelp),
         )
         .get_matches();
-
-    let mut data = util::setup();
 
     match matches.subcommand() {
         ("list", _) => commands::list(&data),
         ("delete", Some(sub)) => {
-            let name = sub.value_of("name").unwrap_or_default();
+            let name = shnippet_name(sub);
             commands::delete(&mut data, &name);
         }
         ("exec", Some(sub)) => {
-            let name = sub.value_of("name").unwrap_or_default();
+            let name = shnippet_name(sub);
             commands::exec(&name);
         }
         ("new", _) => {
             commands::new(&mut data);
         }
         ("edit", Some(sub)) => {
-            let name = sub.value_of("name").unwrap_or_default();
+            let name = shnippet_name(sub);
             commands::edit(&data, &name);
         }
         (name, _) => {
