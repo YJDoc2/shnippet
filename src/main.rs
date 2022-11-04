@@ -2,61 +2,99 @@ mod commands;
 mod util;
 
 use util::shnippet_name;
-use clap::{App, SubCommand, AppSettings};
-use std::process::exit;
+use clap::{Command, builder::Str};
+use std::{process::exit, sync::Arc};
 
 fn main() {
     let mut data = util::setup();
 
-    let shnippets: Vec<App> = data.commands.iter().map(|(name, description)| {
-        SubCommand::with_name(name).about(description.as_str())
-    }).collect();
+    let shnippets = shnippet_subCommands(&data, Option::None);
 
-    let matches = App::new("Shnippet")
+    
+    let matches = Command::new("Shnippet")
         .version("0.1.0")
         .author("YJDoc2")
         .about("Commandline snippet manager")
-        .setting(AppSettings::SubcommandRequiredElseHelp)
-        .subcommand(SubCommand::with_name("list").about("List all shnippets"))
-        .subcommand(SubCommand::with_name("new").about("Add new shnippet"))
+        .subcommand_required(true)
+        .subcommand(Command::new("list").about("List all shnippets"))
+        .subcommand(Command::new("new").about("Add new shnippet"))
         .subcommand(
-            SubCommand::with_name("delete")
+            Command::new("delete")
                 .about("Delete an existing shnippet")
-                .subcommands(shnippets.clone()).setting(AppSettings::SubcommandRequiredElseHelp),
+                .subcommand_required(true)
+                .subcommands(shnippets.clone()),
         )
         .subcommand(
-            SubCommand::with_name("edit")
+            Command::new("edit")
                 .about("Edit an existing shnippet")
-                .subcommands(shnippets.clone()).setting(AppSettings::SubcommandRequiredElseHelp),
+                .subcommands(shnippets.clone()).subcommand_required(true),
         )
         .subcommand(
-            SubCommand::with_name("exec")
+            Command::new("exec")
                 .about("Run a shnippet in shell")
-                .subcommands(shnippets).setting(AppSettings::SubcommandRequiredElseHelp),
+                .subcommands(shnippets),
         )
         .get_matches();
 
     match matches.subcommand() {
-        ("list", _) => commands::list(&data),
-        ("delete", Some(sub)) => {
-            let name = shnippet_name(sub);
-            commands::delete(&mut data, &name);
+        Some(("list", _))=> commands::list(&data),
+        Some(("delete", sub)) => {
+            let opt_name = shnippet_name(sub);
+            match(opt_name){
+                Some(name) => commands::delete(&mut data, name),
+                None => {
+                    eprintln!("Unknown subcommand, try -h for help.");
+                    eprintln!("Exiting...");
+                    exit(1);
+                }
+            }
         }
-        ("exec", Some(sub)) => {
-            let name = shnippet_name(sub);
-            commands::exec(&name);
+        Some(("exec", sub)) => {
+            let opt_name = shnippet_name(sub);
+            match(opt_name){
+                Some(name) => commands::exec(name),
+                None => {
+                    eprintln!("Unknown subcommand, try -h for help.");
+                    eprintln!("Exiting...");
+                    exit(1);
+                }
+            }
         }
-        ("new", _) => {
+        Some(("new", _)) => {
             commands::new(&mut data);
         }
-        ("edit", Some(sub)) => {
-            let name = shnippet_name(sub);
-            commands::edit(&data, &name);
+        Some(("edit", sub)) => {
+            let opt_name = shnippet_name(sub);
+            match(opt_name){
+                Some(name) => commands::edit(&data, name),
+                None => {
+                    eprintln!("Unknown subcommand, try -h for help.");
+                    eprintln!("Exiting...");
+                    exit(1);
+                }
+            }
         }
-        (name, _) => {
+        Some((name, _)) => {
             eprintln!("Unknown subcommand {}, try -h for help.", name);
             eprintln!("Exiting...");
             exit(1);
         }
+        None => {
+            eprintln!("No subcommand given, try -h for help.");
+            eprintln!("Exiting...");
+            exit(1);
+        }
     }
+}
+
+fn shnippet_sub_commands<'a>(data: &util::Data, template: Option<String>) -> Vec<Command> {
+
+    let template_ref = template.as_ref();
+
+
+    let shnippets: Vec<Command> = data.commands.iter().map(|(name, description)| {
+        let about: String = template_ref.map(|help| help.replace("{name}", name).replace("{description}", description).to_owned()).unwrap_or(description.clone());
+        Command::new(name.clone()).about(about)
+    }).collect();
+    shnippets
 }

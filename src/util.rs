@@ -51,6 +51,6 @@ pub fn store_data(data: &Data) {
     };
 }
 
-pub fn shnippet_name<'a>(arg_matches: &'a ArgMatches) -> &'a str {
-    arg_matches.subcommand().0
+pub fn shnippet_name<'a>(arg_matches: &'a ArgMatches) -> Option<&'a str> {
+    arg_matches.subcommand().map(|sub|sub.0)
 }
