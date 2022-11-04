@@ -2,13 +2,13 @@ mod commands;
 mod util;
 
 use util::shnippet_name;
-use clap::{Command, builder::Str};
-use std::{process::exit, sync::Arc};
+use clap::{Command};
+use std::{process::exit};
 
 fn main() {
     let mut data = util::setup();
 
-    let shnippets = shnippet_subCommands(&data, Option::None);
+    let shnippets = shnippet_sub_commands(&data, Option::None);
 
     
     let matches = Command::new("Shnippet")
@@ -40,7 +40,7 @@ fn main() {
         Some(("list", _))=> commands::list(&data),
         Some(("delete", sub)) => {
             let opt_name = shnippet_name(sub);
-            match(opt_name){
+            match opt_name {
                 Some(name) => commands::delete(&mut data, name),
                 None => {
                     eprintln!("Unknown subcommand, try -h for help.");
@@ -51,7 +51,7 @@ fn main() {
         }
         Some(("exec", sub)) => {
             let opt_name = shnippet_name(sub);
-            match(opt_name){
+            match opt_name {
                 Some(name) => commands::exec(name),
                 None => {
                     eprintln!("Unknown subcommand, try -h for help.");
@@ -65,7 +65,7 @@ fn main() {
         }
         Some(("edit", sub)) => {
             let opt_name = shnippet_name(sub);
-            match(opt_name){
+            match opt_name {
                 Some(name) => commands::edit(&data, name),
                 None => {
                     eprintln!("Unknown subcommand, try -h for help.");
